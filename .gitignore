@@ -1,0 +1,8 @@
+# Спільне
+node_modules/
+.env
+dist/
+build/
+
+# WebStorm
+.idea/
