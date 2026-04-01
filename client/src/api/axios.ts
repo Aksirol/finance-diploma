@@ -1,21 +1,16 @@
 import axios from 'axios';
 
-// Створюємо базовий екземпляр Axios
+// Використовуємо змінну середовища Vite, або fallback для локальної розробки
 export const api = axios.create({
-    baseURL: 'http://localhost:5000/api', // Адреса нашого бекенду
+    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
 });
 
-// Додаємо "перехоплювач" (interceptor) для всіх запитів
 api.interceptors.request.use(
     (config) => {
-        // Дістаємо токен з локального сховища браузера
         const token = localStorage.getItem('token');
-
-        // Якщо токен є, додаємо його в заголовок Authorization
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
-
         return config;
     },
     (error) => {

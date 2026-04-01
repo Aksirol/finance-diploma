@@ -143,23 +143,24 @@ export default function AddDataForm() {
                 {activeTab === 'category' && (
                     <form onSubmit={handleAddCategory} className="space-y-4">
                         <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Тип категорії</label>
-                            <select value={catType} onChange={(e) => setCatType(e.target.value as 'INCOME' | 'EXPENSE')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
+                            <label className="block mb-1 text-xs font-medium text-gray-700">Тип категорії</label>
+                            <select value={catType} onChange={(e) => setCatType(e.target.value as 'INCOME' | 'EXPENSE')} className="w-full px-3 py-2 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="EXPENSE">Для витрат</option>
                                 <option value="INCOME">Для доходів</option>
                             </select>
                         </div>
 
                         <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Назва категорії</label>
-                            <div>
-                                <label className="block mb-1 text-xs font-medium text-gray-700">Ліміт (₴) (необов'язково)</label>
-                                <input type="number" step="0.01" value={catLimit} onChange={(e) => setCatLimit(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00" />
-                            </div>
-                            <input type="text" value={catName} onChange={(e) => setCatName(e.target.value)} required className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Наприклад: Транспорт" />
+                            <label className="block mb-1 text-xs font-medium text-gray-700">Назва категорії</label>
+                            <input type="text" value={catName} onChange={(e) => setCatName(e.target.value)} required className="w-full px-3 py-2 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-blue-500" placeholder="Наприклад: Транспорт" />
                         </div>
 
-                        <button type="submit" disabled={addCategoryMutation.isPending} className="w-full py-2 bg-gray-800 text-white rounded-md font-medium hover:bg-gray-900 disabled:opacity-50 transition-colors">
+                        <div>
+                            <label className="block mb-1 text-xs font-medium text-gray-700">Ліміт (₴) (необов'язково)</label>
+                            <input type="number" step="0.01" value={catLimit} onChange={(e) => setCatLimit(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00" />
+                        </div>
+
+                        <button type="submit" disabled={addCategoryMutation.isPending} className="w-full py-2 font-medium text-white transition-colors bg-gray-800 rounded-md hover:bg-gray-900 disabled:opacity-50">
                             {addCategoryMutation.isPending ? 'Створюється...' : 'Створити категорію'}
                         </button>
                     </form>

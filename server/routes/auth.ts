@@ -3,11 +3,13 @@ import type { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../db';
+import { validate } from '../middleware/validate';
+import { registerSchema, loginSchema } from '../schemas';
 
 const router = express.Router();
 
 // Реєстрація (POST /api/auth/register)
-router.post('/register', async (req: Request, res: Response): Promise<any> => {
+router.post('/register', validate(registerSchema), async (req: Request, res: Response): Promise<any> => {
     try {
         const { email, password, name } = req.body;
 
@@ -38,7 +40,7 @@ router.post('/register', async (req: Request, res: Response): Promise<any> => {
 });
 
 // Логін (POST /api/auth/login)
-router.post('/login', async (req: Request, res: Response): Promise<any> => {
+router.post('/login', validate(loginSchema), async (req: Request, res: Response): Promise<any> => {
     try {
         const { email, password } = req.body;
 
@@ -57,8 +59,8 @@ router.post('/login', async (req: Request, res: Response): Promise<any> => {
         // 3. Генеруємо токен
         const token = jwt.sign(
             { userId: user.id },
-            process.env.JWT_SECRET || 'secret',
-            { expiresIn: '1d' } // Токен діє 1 день
+            process.env.JWT_SECRET as string,
+            { expiresIn: '1d' }
         );
 
         res.json({ token, user: { id: user.id, email: user.email, name: user.name } });

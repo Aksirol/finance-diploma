@@ -16,7 +16,8 @@ export const authenticateToken = (req: AuthRequest, res: Response, next: NextFun
     }
 
     // Перевіряємо токен
-    jwt.verify(token, process.env.JWT_SECRET || 'secret', (err, decoded) => {
+    // Перевіряємо токен строго за секретним ключем
+    jwt.verify(token, process.env.JWT_SECRET as string, (err, decoded) => {
         if (err) {
             return res.status(403).json({ error: 'Недійсний або прострочений токен.' });
         }

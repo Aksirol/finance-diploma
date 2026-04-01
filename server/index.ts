@@ -9,21 +9,31 @@ import analyticsRoutes from './routes/analytics';
 
 dotenv.config();
 
+// Перевірка наявності критичних змінних середовища
+if (!process.env.JWT_SECRET) {
+    console.error('FATAL ERROR: JWT_SECRET is not defined in .env');
+    process.exit(1);
+}
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+// Закриваємо CORS тільки для нашого фронтенду
+app.use(cors({
+    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    credentials: true,
+}));
+
 app.use(express.json());
 
+// Підключаємо всі маршрути в правильному логічному порядку
+app.use('/api/auth', authRoutes);
+app.use('/api/categories', categoryRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/analytics', analyticsRoutes);
 
-// Підключаємо маршрути
-app.use('/api/auth', authRoutes);
-app.use('/api/categories', categoryRoutes); // <-- 2. Додаємо маршрут
-
 app.get('/api/health', (req: Request, res: Response) => {
-    res.json({ message: 'Сервер фінансової платформи працює успішно! 🚀' });
+    res.json({ message: 'Сервер працює! 🚀' });
 });
 
 app.listen(PORT, () => {

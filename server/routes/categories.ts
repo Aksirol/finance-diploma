@@ -2,6 +2,8 @@ import express from 'express';
 import type { Response } from 'express';
 import { prisma } from '../db';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { validate } from '../middleware/validate';
+import { categorySchema } from '../schemas';
 
 const router = express.Router();
 
@@ -23,13 +25,13 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response): Prom
 });
 
 // Створити нову категорію (POST /api/categories)
-router.post('/', authenticateToken, async (req: AuthRequest, res: Response): Promise<any> => {
+router.post('/', authenticateToken, validate(categorySchema), async (req: AuthRequest, res: Response): Promise<any> => {
     try {
         const { name, type, limit } = req.body;
         const userId = req.user?.userId;
 
         if (!userId) return res.status(401).json({ error: 'Не авторизовано' });
-        if (!name || !type) return res.status(400).json({ error: 'Назва та тип є обовʼязковими' });
+        // Видаляємо ручну перевірку if (!name || !type) ...
 
         const category = await prisma.category.create({
             data: {

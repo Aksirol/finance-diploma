@@ -2,6 +2,8 @@ import express from 'express';
 import type { Response } from 'express';
 import { prisma } from '../db';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { validate } from '../middleware/validate';
+import { transactionSchema } from '../schemas';
 
 const router = express.Router();
 
@@ -29,18 +31,15 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response): Prom
 });
 
 // Створити нову транзакцію (POST /api/transactions)
-router.post('/', authenticateToken, async (req: AuthRequest, res: Response): Promise<any> => {
+router.post('/', authenticateToken, validate(transactionSchema), async (req: AuthRequest, res: Response): Promise<any> => {
     try {
         const { amount, type, categoryId, description, date } = req.body;
         const userId = req.user?.userId;
 
         if (!userId) return res.status(401).json({ error: 'Не авторизовано' });
-        if (!amount || !type || !categoryId) {
-            return res.status(400).json({ error: 'Сума, тип та категорія є обовʼязковими' });
-        }
 
         const category = await prisma.category.findUnique({
-            where: { id: parseInt(categoryId) }
+            where: { id: categoryId } // Тут більше не треба parseInt(categoryId), бо Zod гарантує число!
         });
 
         if (!category || category.userId !== userId) {
