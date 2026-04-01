@@ -1,8 +1,16 @@
-# Спільне
+# Залежності
 node_modules/
-.env
-dist/
-build/
+/client/node_modules/
+/server/node_modules/
 
-# WebStorm
-.idea/
+# Збірки
+dist/
+/client/dist/
+
+# Змінні оточення (СЕКРЕТНІ ДАНІ)
+.env
+.env.*
+
+# Логи та системні файли
+npm-debug.log*
+.DS_Store

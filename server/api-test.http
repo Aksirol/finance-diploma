@@ -1,0 +1,41 @@
+### 1. Авторизація (Логін)
+# ПІСЛЯ ВИКОНАННЯ ЦЬОГО ЗАПИТУ СКОПІЮЙ ЗНАЧЕННЯ "token"
+POST http://localhost:5000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "diploma@test.com",
+  "password": "securepassword123"
+}
+
+### 2. Додати витрату за Січень (в минулому)
+# УВАГА: Заміни <ТВІЙ_ТОКЕН> на скопійований
+# Переконайся, що categoryId (наприклад, 1) існує у твоєму акаунті
+POST http://localhost:5000/api/transactions
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImlhdCI6MTc3NTA2NjU3MiwiZXhwIjoxNzc1MTUyOTcyfQ.62N1Lb6DW09TtDItisvY3tZMuI7RhJrWZz3YOFG1LIA
+
+{
+  "amount": 2800,
+  "type": "EXPENSE",
+  "categoryId": 1,
+  "description": "Витрати за січень",
+  "date": "2026-01-20T12:00:00Z"
+}
+
+### 3. Додати витрату за Лютий (в минулому)
+POST http://localhost:5000/api/transactions
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImlhdCI6MTc3NTA2NjU3MiwiZXhwIjoxNzc1MTUyOTcyfQ.62N1Lb6DW09TtDItisvY3tZMuI7RhJrWZz3YOFG1LIA
+
+{
+  "amount": 3500,
+  "type": "EXPENSE",
+  "categoryId": 1,
+  "description": "Витрати за лютий",
+  "date": "2026-02-15T12:00:00Z"
+}
+
+### 4. Отримати прогноз на наступний місяць
+GET http://localhost:5000/api/analytics/predict
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImlhdCI6MTc3NTA2NjU3MiwiZXhwIjoxNzc1MTUyOTcyfQ.62N1Lb6DW09TtDItisvY3tZMuI7RhJrWZz3YOFG1LIA

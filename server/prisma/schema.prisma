@@ -1,0 +1,55 @@
+// server/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Модель користувача
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String // Тут будемо зберігати захешований пароль, а не звичайний
+  name         String?
+  createdAt    DateTime @default(now())
+
+  // Зв'язки
+  transactions Transaction[]
+  categories   Category[]
+}
+
+// Модель категорії (для доходів і витрат)
+model Category {
+  id     Int             @id @default(autoincrement())
+  name   String
+  type   TransactionType // INCOME або EXPENSE
+  limit  Float? // Ліміт витрат по категорії (для дипломної вимоги)
+  userId Int
+  user   User            @relation(fields: [userId], references: [id])
+
+  transactions Transaction[]
+}
+
+// Модель транзакції (конкретний дохід або витрата)
+model Transaction {
+  id          Int             @id @default(autoincrement())
+  amount      Float
+  type        TransactionType
+  date        DateTime        @default(now())
+  description String?
+
+  categoryId Int
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+}
+
+// Перелік типів транзакцій
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
