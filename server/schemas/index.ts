@@ -57,3 +57,14 @@ export const updateCategorySchema = z.object({
         limit: z.number().positive({ message: 'Ліміт повинен бути більшим за нуль' }).nullable(),
     }),
 });
+
+// Схема для запиту списку транзакцій (GET /api/transactions)
+export const transactionQuerySchema = z.object({
+    query: z.object({
+        page: z.string().regex(/^\d+$/, 'Page має бути числом').optional(),
+        limit: z.string().regex(/^\d+$/, 'Limit має бути числом').optional(),
+        startDate: z.string().datetime({ message: 'Невірний формат початкової дати' }).optional(),
+        endDate: z.string().datetime({ message: 'Невірний формат кінцевої дати' }).optional(),
+        type: z.enum(['INCOME', 'EXPENSE']).optional(),
+    }),
+});

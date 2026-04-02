@@ -1,4 +1,6 @@
+import toast from 'react-hot-toast';
 import { useState } from 'react';
+import type { FormEvent } from 'react'; // <-- Явно вказуємо, що це імпорт ТИПУ
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/axios';
 
@@ -19,6 +21,9 @@ export default function AddDataForm() {
     const [catLimit, setCatLimit] = useState('');
 
     // Стейт для нової транзакції
+    // Отримуємо поточну дату у форматі YYYY-MM-DD для інпуту
+    const today = new Date().toISOString().split('T')[0];
+    const [date, setDate] = useState(today);
     const [amount, setAmount] = useState('');
     const [transType, setTransType] = useState<'INCOME' | 'EXPENSE'>('EXPENSE');
     const [categoryId, setCategoryId] = useState('');
@@ -36,29 +41,34 @@ export default function AddDataForm() {
     // Мутація для створення категорії
     const addCategoryMutation = useMutation({
         mutationFn: (newCategory: any) => api.post('/categories', newCategory),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['categories'] }); // Оновлюємо список категорій
+        onSuccess: async () => { // <-- Зробили функцію асинхронною
+            await queryClient.invalidateQueries({ queryKey: ['categories'] }); // <-- Додали await
             setCatName('');
-            alert('Категорію успішно додано!');
+            toast.success('Категорію успішно створено!');
         },
     });
 
     // Мутація для створення транзакції
     const addTransactionMutation = useMutation({
         mutationFn: (newTransaction: any) => api.post('/transactions', newTransaction),
-        onSuccess: (response) => {
-            queryClient.invalidateQueries({ queryKey: ['transactions'] }); // Оновлюємо дашборд
+        onSuccess: async (response) => { // <-- Зробили функцію асинхронною
+            await queryClient.invalidateQueries({ queryKey: ['transactions'] }); // <-- Додали await
+            await queryClient.invalidateQueries({ queryKey: ['analytics'] });    // <-- Додали await
             setAmount('');
             setDescription('');
+            setDate(today);
 
-            // Якщо сервер повернув попередження про ліміт — показуємо його!
+            toast.success('Транзакцію додано!'); // <-- Повідомлення про додавання
+
+            // Якщо є попередження про ліміт — показуємо його червоним і довше (6 секунд)
             if (response.data.warning) {
-                alert(response.data.warning);
+                toast.error(response.data.warning, { duration: 6000 });
             }
         },
     });
 
-    const handleAddCategory = (e: React.FormEvent) => {
+    // Використовуємо імпортований FormEvent замість React.FormEvent
+    const handleAddCategory = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!catName) return;
         addCategoryMutation.mutate({
@@ -66,17 +76,20 @@ export default function AddDataForm() {
             type: catType,
             limit: catLimit ? parseFloat(catLimit) : null
         });
-        setCatLimit(''); // Очищаємо поле;
+        setCatLimit('');
     };
 
-    const handleAddTransaction = (e: React.FormEvent) => {
+    // Використовуємо імпортований FormEvent
+    const handleAddTransaction = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!amount || !categoryId) return;
+
         addTransactionMutation.mutate({
             amount: parseFloat(amount),
             type: transType,
             categoryId: parseInt(categoryId),
             description,
+            date: new Date(date).toISOString(),
         });
     };
 
@@ -84,7 +97,7 @@ export default function AddDataForm() {
     const filteredCategories = categories.filter(c => c.type === transType);
 
     return (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="overflow-hidden bg-white shadow-sm rounded-xl">
             {/* Перемикач вкладок */}
             <div className="flex border-b border-gray-100">
                 <button
@@ -111,29 +124,39 @@ export default function AddDataForm() {
                         </div>
 
                         <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Сума (₴)</label>
-                            <input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0.00" />
+                            <label className="block mb-1 text-xs font-medium text-gray-700">Сума (₴)</label>
+                            <input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required className="w-full px-3 py-2 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00" />
                         </div>
 
                         <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Категорія</label>
-                            <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} required className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
+                            <label className="block mb-1 text-xs font-medium text-gray-700">Категорія</label>
+                            <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} required className="w-full px-3 py-2 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="" disabled>Оберіть категорію</option>
                                 {filteredCategories.map(c => (
                                     <option key={c.id} value={c.id}>{c.name}</option>
                                 ))}
                             </select>
+                            <div className="mt-4">
+                                <label className="block mb-1 text-xs font-medium text-gray-700">Дата</label>
+                                <input
+                                    type="date"
+                                    value={date}
+                                    onChange={(e) => setDate(e.target.value)}
+                                    required
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
                             {filteredCategories.length === 0 && (
-                                <p className="text-xs text-red-500 mt-1">Спершу створіть категорію для цього типу!</p>
+                                <p className="mt-1 text-xs text-red-500">Спершу створіть категорію для цього типу!</p>
                             )}
                         </div>
 
                         <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Опис (необов'язково)</label>
-                            <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Наприклад: Продукти в АТБ" />
+                            <label className="block mb-1 text-xs font-medium text-gray-700">Опис (необов'язково)</label>
+                            <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-blue-500" placeholder="Наприклад: Продукти в АТБ" />
                         </div>
 
-                        <button type="submit" disabled={addTransactionMutation.isPending || !categoryId} className="w-full py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                        <button type="submit" disabled={addTransactionMutation.isPending || !categoryId} className="w-full py-2 font-medium text-white transition-colors bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50">
                             {addTransactionMutation.isPending ? 'Додається...' : 'Додати транзакцію'}
                         </button>
                     </form>

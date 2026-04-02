@@ -3,29 +3,61 @@ import type { Response } from 'express';
 import { prisma } from '../db';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { validate } from '../middleware/validate';
-import { transactionSchema, idParamSchema } from '../schemas';
+// ДОДАНО: transactionQuerySchema та logger
+import { transactionSchema, idParamSchema, transactionQuerySchema } from '../schemas';
+import { logger } from '../utils/logger';
 
 const router = express.Router();
 
-// Отримати всі транзакції користувача (GET /api/transactions)
-router.get('/', authenticateToken, async (req: AuthRequest, res: Response): Promise<any> => {
+// Отримати всі транзакції з пагінацією та фільтрацією (GET /api/transactions)
+router.get('/', authenticateToken, validate(transactionQuerySchema), async (req: AuthRequest, res: Response): Promise<any> => {
     try {
         const userId = req.user?.userId;
         if (!userId) return res.status(401).json({ error: 'Не авторизовано' });
 
-        const transactions = await prisma.transaction.findMany({
-            where: { userId },
-            include: {
-                category: true, // Додаємо дані про категорію до кожної транзакції
-            },
-            orderBy: {
-                date: 'desc', // Сортуємо від найновіших до найстаріших
-            },
-        });
+        // Дістаємо параметри з URL (з дефолтними значеннями)
+        const page = parseInt(req.query.page as string || '1');
+        const limit = parseInt(req.query.limit as string || '50'); // Ставимо 50, щоб поки не зламати фронтенд
+        const skip = (page - 1) * limit;
 
-        res.json(transactions);
+        const { startDate, endDate, type } = req.query;
+
+        // Будуємо об'єкт фільтрації (whereClause)
+        const whereClause: any = { userId };
+
+        if (type) whereClause.type = type;
+
+        if (startDate || endDate) {
+            whereClause.date = {};
+            if (startDate) whereClause.date.gte = new Date(startDate as string);
+            if (endDate) whereClause.date.lte = new Date(endDate as string);
+        }
+
+        // Паралельно робимо 2 запити: отримуємо самі дані та їх загальну кількість
+        const [transactions, total] = await Promise.all([
+            prisma.transaction.findMany({
+                where: whereClause,
+                include: { category: true },
+                orderBy: { date: 'desc' },
+                skip,
+                take: limit,
+            }),
+            prisma.transaction.count({ where: whereClause })
+        ]);
+
+        // Повертаємо дані разом з метаданими для пагінації
+        res.json({
+            data: transactions,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            }
+        });
     } catch (error) {
-        console.error(error);
+        // Використовуємо наш новий професійний логер!
+        logger.error(error, 'Помилка отримання транзакцій');
         res.status(500).json({ error: 'Помилка отримання транзакцій' });
     }
 });
@@ -39,7 +71,7 @@ router.post('/', authenticateToken, validate(transactionSchema), async (req: Aut
         if (!userId) return res.status(401).json({ error: 'Не авторизовано' });
 
         const category = await prisma.category.findUnique({
-            where: { id: categoryId } 
+            where: { id: categoryId }
         });
 
         if (!category || category.userId !== userId) {
@@ -92,7 +124,7 @@ router.post('/', authenticateToken, validate(transactionSchema), async (req: Aut
         // Повертаємо транзакцію і попередження (якщо воно є)
         res.status(201).json({ transaction, warning });
     } catch (error) {
-        console.error(error);
+        logger.error(error, 'Опис помилки');
         res.status(500).json({ error: 'Помилка створення транзакції' });
     }
 });
@@ -118,7 +150,7 @@ router.delete('/:id', authenticateToken, validate(idParamSchema), async (req: Au
 
         res.json({ message: 'Транзакцію успішно видалено' });
     } catch (error) {
-        console.error(error);
+        logger.error(error, 'Опис помилки');
         res.status(500).json({ error: 'Помилка видалення транзакції' });
     }
 });

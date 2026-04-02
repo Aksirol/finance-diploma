@@ -1,8 +1,10 @@
+import toast from 'react-hot-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/axios';
 import AddDataForm from '../components/AddDataForm';
-import ExpenseChart from '../components/ExpenseChart'; // <-- Додаємо імпорт
+import ExpenseChart from '../components/ExpenseChart';
+import BalanceChart from '../components/BalanceChart';
 
 // Описуємо тип транзакції (як вона приходить з бекенду)
 interface Transaction {
@@ -22,7 +24,7 @@ export default function Dashboard() {
         queryKey: ['transactions'],
         queryFn: async () => {
             const response = await api.get('/transactions');
-            return response.data;
+            return response.data.data;
         },
     });
 
@@ -62,7 +64,7 @@ export default function Dashboard() {
     // Логіка експорту в CSV
     const handleExportCSV = () => {
         if (transactions.length === 0) {
-            alert('Немає даних для експорту');
+            toast.error('Немає даних для експорту');
             return;
         }
 
@@ -163,11 +165,14 @@ export default function Dashboard() {
                 {/* Головний контент: Графік, Список, Форма */}
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
 
-                    {/* Ліва колонка (Графік + Список транзакцій займають 2 частини) */}
+                    {/* Ліва колонка (Графіки + Список транзакцій займають 2 частини) */}
                     <div className="space-y-6 lg:col-span-2">
 
-                        {/* Додаємо наш новий графік сюди */}
-                        <ExpenseChart transactions={transactions} />
+                        {/* Блок з двома графіками поруч */}
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                            <ExpenseChart transactions={transactions} />
+                            <BalanceChart transactions={transactions} />
+                        </div>
 
                         <div className="overflow-hidden bg-white shadow-sm rounded-xl h-fit">
                             <div className="p-6 border-b border-gray-100">
