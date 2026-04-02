@@ -3,7 +3,7 @@ import type { Response } from 'express';
 import { prisma } from '../db';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { validate } from '../middleware/validate';
-import { transactionSchema } from '../schemas';
+import { transactionSchema, idParamSchema } from '../schemas';
 
 const router = express.Router();
 
@@ -39,7 +39,7 @@ router.post('/', authenticateToken, validate(transactionSchema), async (req: Aut
         if (!userId) return res.status(401).json({ error: 'Не авторизовано' });
 
         const category = await prisma.category.findUnique({
-            where: { id: categoryId } // Тут більше не треба parseInt(categoryId), бо Zod гарантує число!
+            where: { id: categoryId } 
         });
 
         if (!category || category.userId !== userId) {
@@ -94,6 +94,32 @@ router.post('/', authenticateToken, validate(transactionSchema), async (req: Aut
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Помилка створення транзакції' });
+    }
+});
+
+// Видалити транзакцію (DELETE /api/transactions/:id)
+// Видалити транзакцію (DELETE /api/transactions/:id)
+router.delete('/:id', authenticateToken, validate(idParamSchema), async (req: AuthRequest, res: Response): Promise<any> => {
+    try {
+        const userId = req.user?.userId;
+        const transactionId = parseInt(req.params.id as string); // <-- Додали as string
+
+        if (!userId) return res.status(401).json({ error: 'Не авторизовано' });
+
+        // Перевіряємо, чи належить транзакція користувачу
+        const existingTransaction = await prisma.transaction.findUnique({ where: { id: transactionId } });
+        if (!existingTransaction || existingTransaction.userId !== userId) {
+            return res.status(404).json({ error: 'Транзакцію не знайдено' });
+        }
+
+        await prisma.transaction.delete({
+            where: { id: transactionId }
+        });
+
+        res.json({ message: 'Транзакцію успішно видалено' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Помилка видалення транзакції' });
     }
 });
 

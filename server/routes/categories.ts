@@ -3,7 +3,7 @@ import type { Response } from 'express';
 import { prisma } from '../db';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { validate } from '../middleware/validate';
-import { categorySchema } from '../schemas';
+import { categorySchema, idParamSchema, updateCategorySchema } from '../schemas';
 
 const router = express.Router();
 
@@ -46,6 +46,61 @@ router.post('/', authenticateToken, validate(categorySchema), async (req: AuthRe
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Помилка створення категорії' });
+    }
+});
+
+// Редагувати ліміт категорії (PATCH /api/categories/:id)
+router.patch('/:id', authenticateToken, validate(updateCategorySchema), async (req: AuthRequest, res: Response): Promise<any> => {
+    try {
+        const userId = req.user?.userId;
+        const categoryId = parseInt(req.params.id as string); // <-- Додали as string
+        const { limit } = req.body;
+
+        if (!userId) return res.status(401).json({ error: 'Не авторизовано' });
+
+        const existingCategory = await prisma.category.findUnique({ where: { id: categoryId } });
+        if (!existingCategory || existingCategory.userId !== userId) {
+            return res.status(404).json({ error: 'Категорію не знайдено' });
+        }
+
+        const updatedCategory = await prisma.category.update({
+            where: { id: categoryId },
+            data: { limit },
+        });
+
+        res.json(updatedCategory);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Помилка оновлення категорії' });
+    }
+});
+
+// Видалити категорію (DELETE /api/categories/:id)
+router.delete('/:id', authenticateToken, validate(idParamSchema), async (req: AuthRequest, res: Response): Promise<any> => {
+    try {
+        const userId = req.user?.userId;
+        const categoryId = parseInt(req.params.id as string); // <-- Додали as string
+
+        if (!userId) return res.status(401).json({ error: 'Не авторизовано' });
+
+        const existingCategory = await prisma.category.findUnique({ where: { id: categoryId } });
+        if (!existingCategory || existingCategory.userId !== userId) {
+            return res.status(404).json({ error: 'Категорію не знайдено' });
+        }
+
+        // Важливо: спочатку видаляємо всі транзакції, пов'язані з цією категорією
+        await prisma.transaction.deleteMany({
+            where: { categoryId: categoryId }
+        });
+
+        await prisma.category.delete({
+            where: { id: categoryId }
+        });
+
+        res.json({ message: 'Категорію та всі її транзакції успішно видалено' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Помилка видалення категорії' });
     }
 });
 

@@ -39,3 +39,21 @@ export const transactionSchema = z.object({
         date: z.string().datetime({ message: 'Невірний формат дати' }).optional().or(z.date().optional()),
     }),
 });
+
+// Схема для перевірки ID у параметрах URL (наприклад, DELETE /api/transactions/:id)
+export const idParamSchema = z.object({
+    params: z.object({
+        // Zod отримає рядок з URL, перевірить, чи це числа, і перетворить на Number
+        id: z.string().regex(/^\d+$/, 'ID має бути числом').transform(Number),
+    }),
+});
+
+// Схема для оновлення ліміту категорії (PATCH /api/categories/:id)
+export const updateCategorySchema = z.object({
+    params: z.object({
+        id: z.string().regex(/^\d+$/, 'ID має бути числом').transform(Number),
+    }),
+    body: z.object({
+        limit: z.number().positive({ message: 'Ліміт повинен бути більшим за нуль' }).nullable(),
+    }),
+});
