@@ -82,9 +82,9 @@ router.post('/', authenticateToken, validate(transactionSchema), async (req: Aut
 
         const transaction = await prisma.transaction.create({
             data: {
-                amount: parseFloat(amount),
+                amount, // <-- Прибрали parseFloat
                 type,
-                categoryId: parseInt(categoryId),
+                categoryId, // <-- Прибрали parseInt
                 description: description || null,
                 date: transactionDate,
                 userId

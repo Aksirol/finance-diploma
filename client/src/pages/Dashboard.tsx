@@ -1,3 +1,4 @@
+import { useState } from 'react'; // <-- ДОДАНО
 import toast from 'react-hot-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -19,14 +20,28 @@ interface Transaction {
 export default function Dashboard() {
     const navigate = useNavigate();
 
-    // Отримуємо транзакції з сервера за допомогою React Query
-    const { data: transactions = [], isLoading, isError } = useQuery<Transaction[]>({
-        queryKey: ['transactions'],
+    // 1. Отримуємо ВСІ транзакції для графіків та карток (статистика має рахуватися з усіх даних)
+    const { data: allTransactions = [], isLoading, isError } = useQuery<Transaction[]>({
+        queryKey: ['transactions', 'all'],
         queryFn: async () => {
-            const response = await api.get('/transactions');
+            const response = await api.get('/transactions?limit=1000'); // Беремо з запасом для аналітики
             return response.data.data;
         },
     });
+
+    // 2. Отримуємо транзакції для візуального списку з пагінацією
+    const [page, setPage] = useState(1);
+    const { data: listData } = useQuery({
+        queryKey: ['transactions', 'list', page],
+        queryFn: async () => {
+            const response = await api.get(`/transactions?page=${page}&limit=5`); // Показуємо по 5 на сторінку
+            return response.data;
+        },
+    });
+
+    // Розділяємо дані
+    const paginatedTransactions: Transaction[] = listData?.data || [];
+    const meta = listData?.meta;
 
     // НОВИЙ КОД: Отримуємо прогноз
     const { data: analytics } = useQuery({
@@ -43,9 +58,11 @@ export default function Dashboard() {
     const deleteTransactionMutation = useMutation({
         mutationFn: (id: number) => api.delete(`/transactions/${id}`),
         onSuccess: () => {
-            // Миттєво оновлюємо списки та графіки після видалення
-            queryClient.invalidateQueries({ queryKey: ['transactions'] });
-            queryClient.invalidateQueries({ queryKey: ['analytics'] });
+            // Повертаємо Promise, щоб React Query знав, коли оновлення завершено
+            return Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['transactions'] }),
+                queryClient.invalidateQueries({ queryKey: ['analytics'] })
+            ]);
         },
     });
 
@@ -63,7 +80,7 @@ export default function Dashboard() {
 
     // Логіка експорту в CSV
     const handleExportCSV = () => {
-        if (transactions.length === 0) {
+        if (allTransactions.length === 0) {
             toast.error('Немає даних для експорту');
             return;
         }
@@ -74,7 +91,7 @@ export default function Dashboard() {
         // Формуємо рядки з даними
         const csvRows = [headers.join(',')];
 
-        transactions.forEach(t => {
+        allTransactions.forEach(t => {
             const date = new Date(t.date).toLocaleDateString('uk-UA');
             const category = t.category?.name || 'Без категорії';
             const type = t.type === 'INCOME' ? 'Дохід' : 'Витрата';
@@ -102,11 +119,11 @@ export default function Dashboard() {
     };
 
     // Вираховуємо статистику
-    const income = transactions
+    const income = allTransactions
         .filter((t) => t.type === 'INCOME')
         .reduce((sum, t) => sum + t.amount, 0);
 
-    const expense = transactions
+    const expense = allTransactions
         .filter((t) => t.type === 'EXPENSE')
         .reduce((sum, t) => sum + t.amount, 0);
 
@@ -170,8 +187,8 @@ export default function Dashboard() {
 
                         {/* Блок з двома графіками поруч */}
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                            <ExpenseChart transactions={transactions} />
-                            <BalanceChart transactions={transactions} />
+                            <ExpenseChart transactions={allTransactions} />
+                            <BalanceChart transactions={allTransactions} />
                         </div>
 
                         <div className="overflow-hidden bg-white shadow-sm rounded-xl h-fit">
@@ -179,12 +196,12 @@ export default function Dashboard() {
                                 <h2 className="text-lg font-semibold text-gray-800">Останні транзакції</h2>
                             </div>
                             <div className="divide-y divide-gray-100">
-                                {transactions.length === 0 ? (
+                                {allTransactions.length === 0 ? (
                                     <div className="p-6 text-center text-gray-500">
                                         У вас ще немає транзакцій.
                                     </div>
                                 ) : (
-                                    transactions.map((t) => (
+                                    paginatedTransactions.map((t) => (
                                         <div key={t.id} className="flex items-center justify-between p-6 transition-colors hover:bg-gray-50">
                                             <div>
                                                 <p className="font-medium text-gray-800">{t.description || 'Без опису'}</p>
@@ -214,6 +231,26 @@ export default function Dashboard() {
                                 )}
                             </div>
                         </div>
+                        {/* Панель пагінації */}
+                        {meta && meta.totalPages > 1 && (
+                            <div className="flex items-center justify-between p-4 bg-gray-50 border-t border-gray-100 rounded-b-xl">
+                                <button
+                                    onClick={() => setPage(page - 1)} // <-- Виправлено
+                                    disabled={page === 1}
+                                    className="px-4 py-1.5 text-sm font-medium bg-white border border-gray-300 rounded-md disabled:opacity-40 hover:bg-gray-100 transition"
+                                >
+                                    Попередня
+                                </button>
+                                <span className="text-sm font-medium text-gray-600">Сторінка {page} з {meta.totalPages}</span>
+                                <button
+                                    onClick={() => setPage(page + 1)} // <-- Виправлено
+                                    disabled={page === meta.totalPages}
+                                    className="px-4 py-1.5 text-sm font-medium bg-white border border-gray-300 rounded-md disabled:opacity-40 hover:bg-gray-100 transition"
+                                >
+                                    Наступна
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     {/* Права колонка (Форма додавання) */}

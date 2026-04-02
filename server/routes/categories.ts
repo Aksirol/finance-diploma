@@ -4,6 +4,7 @@ import { prisma } from '../db';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { categorySchema, idParamSchema, updateCategorySchema } from '../schemas';
+import { logger } from '../utils/logger';
 
 const router = express.Router();
 
@@ -19,8 +20,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response): Prom
 
         res.json(categories);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Помилка отримання категорій' });
+        logger.error(error, 'Помилка отримання категорій');;
     }
 });
 
@@ -44,8 +44,7 @@ router.post('/', authenticateToken, validate(categorySchema), async (req: AuthRe
 
         res.status(201).json(category);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Помилка створення категорії' });
+        logger.error(error, 'Помилка створення категорії');
     }
 });
 
@@ -70,8 +69,7 @@ router.patch('/:id', authenticateToken, validate(updateCategorySchema), async (r
 
         res.json(updatedCategory);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Помилка оновлення категорії' });
+        logger.error(error, 'Помилка оновлення категорії');;
     }
 });
 
@@ -99,8 +97,7 @@ router.delete('/:id', authenticateToken, validate(idParamSchema), async (req: Au
 
         res.json({ message: 'Категорію та всі її транзакції успішно видалено' });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Помилка видалення категорії' });
+        logger.error(error, 'Помилка видалення категорії');
     }
 });
 

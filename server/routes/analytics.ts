@@ -3,6 +3,7 @@ import type { Response } from 'express';
 import { prisma } from '../db';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { calculateLinearRegression } from '../utils/regression';
+import { logger } from '../utils/logger';
 
 const router = express.Router();
 
@@ -47,8 +48,7 @@ router.get('/predict', authenticateToken, async (req: AuthRequest, res: Response
         });
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Помилка розрахунку прогнозу' });
+        logger.error(error, 'Помилка розрахунку прогнозу');
     }
 });
 
